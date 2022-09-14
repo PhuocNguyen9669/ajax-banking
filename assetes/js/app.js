@@ -26,3 +26,29 @@ class Withdraw {
         this.deleted = deleted;
     }
 }
+
+
+class Sender extends Customer {
+    constructor() {
+        super();
+    }
+}
+
+class Recipient extends Customer {
+    constructor() {
+        super();
+    }
+}
+
+class Transfer{
+    constructor(id,deleted = 0,fees = 10,feesAmount,transactionAmount,transferAmount,recipientId,senderId){
+        this.id = id;
+        this.deleted = deleted;
+        this.fees = fees;
+        this.feesAmount = feesAmount;
+        this.transactionAmount = transactionAmount;
+        this.transferAmount = transferAmount;
+        this.recipientId = recipientId;
+        this.senderId = senderId;
+    }
+}

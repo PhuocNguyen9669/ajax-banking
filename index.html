@@ -221,14 +221,76 @@
     </div>
 </div>
 
-
+<!--Modal transfer-->
+<div class="modal fade " id="mdTransfer" tabindex="-1" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Transfer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <!-- <span aria-hidden="true">&times;</span> -->
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-alert-danger hide"></div>
+                <form id="frmTransfer">
+                    <div class="row">
+                        <div class="col-lg-3">
+                            <input type="hidden" id="customerIdT">
+                            <label for="fullName">Sender ID</label>
+                            <input type="text" id="senderId" readonly class="form-control">
+                        </div>
+                        <div class="col-lg-3">
+                            <input type="hidden" id="customerIdT">
+                            <label for="fullName">Sender Name</label>
+                            <input type="text" id="senderName" readonly class="form-control">
+                        </div>
+                        <div class="col-lg-3">
+                            <label for="email">Email</label>
+                            <input type="email" id="senderEmail" name="senderEmail" class="form-control" readonly>
+                        </div>
+                        <div class="col-lg-3">
+                            <label for="phone">Sender Balance</label>
+                            <input type="text" id="senderBalance" readonly class="form-control">
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-lg-3">
+                            <!-- <input type="hidden" id="recipientId"> -->
+                            <label for="recipientId">Recipient Name</label>
+                            <select type="form-select" id="recipientId" class="form-control" name="recipientId">
+                            </select>
+                        </div>
+                        <div class="col-lg-3">
+                            <label for="transferAmount">Transfer Amount ($)</label>
+                            <input type="text" id="transferAmount" name="transferAmount" class="form-control">
+                        </div>
+                        <div class="col-lg-3">
+                            <label for="fees">Fees(%)</label>
+                            <input type="text" id="fees" name="fees" class="form-control" readonly value=10>
+                        </div>
+                        <div class="col-lg-3">
+                            <label for="totalAmount">Total amount($)</label>
+                            <input type="text" id="totalAmount" name="totalAmount" class="form-control" readonly>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-outline-primary" id="btnTransfer">Transfer</button>
+            </div>
+        </div>
+    </div>
+</div>
 </body>
 <script src="./assetes/js/app.js"></script>
 <script src="./assetes/boostrap/v5.2/js/bootstrap.bundle.min.js"></script>
 <script src="./assetes/jquery/v3.6.1/jquery-3.6.1.min.js"></script>
 <script src="./assetes/sweetalert2/sweetalert2.all.min.js"></script>
 <script src="./assetes/fortawesome/js/all.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.js"></script>
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.js"></script> -->
+<script src="./assetes/jquery/v3.6.1/jquery.validate-1.19.3.min.js"></script>
 
 <script>
     let customer = new Customer();
@@ -236,7 +298,12 @@
     let deposit = new Deposit();
 
     let withdraw = new Withdraw();
-    let id = 1;
+     
+    let sender = new Sender();
+
+    let recipient = new Recipient();
+
+    let transfer = new Transfer();
 
     function renderCustomer(customer) {
         let str = `
@@ -292,7 +359,7 @@
                     "content-type": "application/json"
                 },
                 "type": "GET",
-                "url": "http://localhost:5000/customers?deleted=0"
+                "url": "http://localhost:4100/customers?deleted=0"
             })
             .done((data) => {
                 let tbCustomer = $("#tbCustomer tbody");
@@ -315,6 +382,28 @@
     }
     loadCustomer();
 
+    function getAllCustomer(){
+         $.ajax({
+                "headers": {
+                    "accept": "application/json",
+                    "content-type": "applicattion/json"
+                },
+                "type": "GET",
+                "url": "http://localhost:4100/customers/"
+            })
+            .done((data) => {
+                let str =`<option value=0>--Recipient--</option>`;
+                $.each(data,(i, item)=>{
+                    str+=`<option value=${item.id}> (${item.id}) ${item.fullName}</option>`
+                })
+                document.getElementById("recipientId").innerHTML = str;
+            })
+            .fail((jqXHR) => {
+                console.log(jqXHR);
+            })
+    }
+
+
     function getCustomerById(customerId) {
         return $.ajax({
                 "headers": {
@@ -322,7 +411,7 @@
                     "content-type": "applicattion/json"
                 },
                 "type": "GET",
-                "url": "http://localhost:5000/customers/" + customerId
+                "url": "http://localhost:4100/customers/" + customerId
             })
             .done((data) => {
                 customer = data;
@@ -393,6 +482,37 @@
         })
     }
 
+    function hanleShowTransferModal() {
+        $(".transfer").on("click", function(){
+            let id = $(this).data("id");
+            getCustomerById(id).then(() => {
+                $("#senderId").val(customer.id);
+                $("#senderName").val(customer.fullName);
+                $("#senderEmail").val(customer.email);
+                $("#senderBalance").val(customer.balance);
+                getAllCustomer();
+                $("#mdTransfer").modal("show");
+            })
+            .catch(() => {
+                Swal.fire({
+                    title: "Customer information invalid",
+                    icon: 'error',
+                })
+            })
+        })
+    }
+    // $("#transferAmount").on('keyup',function(){
+    //     let transferAmount= $("#transferAmount").val();
+    // let totalTransactionAmount = +transferAmount + transferAmount*0.1;
+    // document.getElementById("totalAmount").value = totalTransactionAmount;
+    // })
+    $('#transferAmount').on('input', function(){
+            let transactionAmount = $('#transferAmount').val();
+            let totalTransactionAmount = Number(transactionAmount) + Number(transactionAmount)*0.1;
+            $('#totalAmount').val(totalTransactionAmount);
+        })
+    
+
 
     function handleShowConfirmDelete() {
         $(".suspended").on("click", function () {
@@ -416,7 +536,7 @@
                                         "content-type": "application/json"
                                     },
                                     type: "PATCH",
-                                    url: "http://localhost:5000/customers/" + customerId,
+                                    url: "http://localhost:4100/customers/" + customerId,
                                     data: JSON.stringify(customer)
                                 })
                                 .done((data) => {
@@ -472,7 +592,7 @@
                     "content-type": "application/json"
                 },
                 "type": "PATCH",
-                "url": "http://localhost:5000/customers/" + customerId,
+                "url": "http://localhost:4100/customers/" + customerId,
                 "data": JSON.stringify(obj)
             })
             .done((data) => {
@@ -500,26 +620,16 @@
     let btnCreate = $("#btnCreate");
     btnCreate.on("click", () => {
         
-        let fullName = $('#fullNameCre').val();
-            let email = $('#emailCre').val();
-            let phone = $('#phoneCre').val();
-            let address = $('#addressCre').val();
-            delete customer.id;
-            customer.fullName = fullName;
-            customer.email = email;
-            customer.phone = phone;
-            customer.address = address;
-            customer.balance = "0";
-        // customer.fullName = $("#fullNameCre").val();
-        // customer.email = $("#emailCre").val();
-        // customer.phone = $("#phoneCre").val();
-        // customer.address = $("#addressCre").val();
-        // customer.balance = 0;
-        // customer.deleted = 0;
+        customer.fullName = $("#fullNameCre").val();
+        customer.email = $("#emailCre").val();
+        customer.phone = $("#phoneCre").val();
+        customer.address = $("#addressCre").val();
+        customer.balance = 0;
+        customer.deleted = 0;
         
-        // // delete customer.id;
-        // console.log(customer.id);
-        // // customer = new Customer(null, fullName, email, phone, address, 0, 0);
+        delete customer.id;
+        console.log(customer.id);
+        // customer = new Customer(null, fullName, email, phone, address, 0, 0);
 
         $.ajax({
                 "headers": {
@@ -527,7 +637,7 @@
                     "content-type": "application/json"
                 },
                 "type": "POST",
-                "url": "http://localhost:5000/customers/",
+                "url": "http://localhost:4100/customers/",
                 "data": JSON.stringify(customer)
             })
             .done((data) => {
@@ -569,7 +679,7 @@
             withdraw.customerId = customer.id;
             withdraw.transactionAmount =  transactionAmount;
 
-            reduceBalace(customerId).then(() => {
+            reduceBalace(customer).then(() => {
                 insWithdraw();
             })
             .catch(() => {
@@ -579,14 +689,225 @@
     }
 
 
-    function reduceBalace(customerId) {
+    function doTransfer() {
+            let senderId = $('#senderId').val();
+            let recipientId = $('#recipientId :selected').val();
+            let transferAmount = $('#transferAmount').val();
+            let totalTransactionAmount = Number(transferAmount) + Number(transferAmount)*0.1;
+            let str = `SenderId : ${senderId} RecipientId : ${recipientId} TransferAmount : ${transferAmount}`;
+            getCustomerById(senderId).then(() =>{
+                sender = customer;
+                let senderBalance = sender.balance;
+                if(customer.balance < totalTransactionAmount) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Oops...',
+                        text: 'Tiền chuyển khoản vượt quá số tiền hiện tại!',
+                        })
+                }else{
+                    if(senderId == recipientId) { Swal.fire({
+                        icon: 'error',
+                        title: 'Oops...',
+                        text: 'Người Chuyển Tiền Phải Khác Người Nhận Tiền!',
+                        })
+                    } else {
+                        getCustomerById(recipientId).then(() =>{
+                            recipient = customer;
+                            let recipientBalance = recipient.balance;
+                            customer = sender;
+                            
+                            customer.balance = sender.balance - totalTransactionAmount;
+                                $.ajax({
+                                    "headers": {
+                                        "accepts": "application/json",
+                                        "content-type": "application/json"
+                                    },
+                                    "async":false,
+                                    "type": "PUT",
+                                    "url": "http://localhost:4100/customers/" + customer.id,
+                                    "data": JSON.stringify(customer)
+                                })
+                            .done((item) => {
+                                let senderChange = item;
+                                // alert("Trừ Tiền Khách Hàng Chuyển Tiền Thành Công");
+                                customer = recipient;
+                                customer.balance = customer.balance + Number(transferAmount);
+                                $.ajax({
+                                    "headers": {
+                                        "async": "application/json",
+                                        "content-type": "application/json"
+                                      },
+                                    "accepts":false,
+                                    "type": "PUT",
+                                    "url": "http://localhost:4100/customers/" + customer.id,
+                                    "data": JSON.stringify(customer)
+                                })
+                                .done((item) => {
+                                //    alert("Cộng Tiền Khách Hàng Nhận Tiền Thành Công");
+                                    let recipientChange = customer;
+                                    delete transfer.id;
+                                    // transfer.createdAt = new Date();
+                                    transfer.feesAmount = 0.1 * Number(transferAmount);
+                                    transfer.transactionAmount = Number(transferAmount) + 0.1 * Number(transferAmount);
+                                    transfer.transferAmount = Number(transferAmount);   
+                                    transfer.recipientId = recipient.id;
+                                    transfer.senderId = sender.id;
+                                    $.ajax({
+                                        "headers": {
+                                            "accepts": "application/json",
+                                            "content-type": "application/json"
+                                        },
+                                        "type": "POST",
+                                        "url": "http://localhost:4100/transfers",
+                                        "data": JSON.stringify(transfer)
+                                    })
+                                    .done((item) => {
+
+                                        Swal.fire(
+                                        'Good job!',
+                                        'Transfer successfully!',
+                                        'success'
+                                        )
+                                        let strSen =`<tr id = "tr_${senderChange.id}" data-id="${senderChange.id}">
+                                                        <td>${senderChange.id}</td>
+                                                        <td>${senderChange.fullName}</td>
+                                                        <td>${senderChange.email}</td>
+                                                        <td>${senderChange.phone}</td>
+                                                        <td>${senderChange.addeess}</td>                                        
+                                                        <td>${senderChange.balance}</td>
+                                                        <td>
+                                                            <button class="btn btn-outline-primary edit" data-id="${customer.id}"
+                                                                data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Edit">
+                                                                <i class="fa fa-edit"></i>
+                                                            </button>
+                                                        <td>  
+                                                            <button class="btn btn-outline-success deposit" data-id="${customer.id}"
+                                                                data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Deposit">
+                                                                <i class="fa fa-plus"></i>
+                                                            </button>
+                                                        </td>  
+
+                                                        <td>
+                                                            <button class="btn btn-outline-warning withdraw" data-id="${customer.id}"
+                                                                data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Withdraw">
+                                                                <i class="fa fa-minus"></i>
+                                                            </button>
+                                                        </td>   
+                                                        <td>
+                                                            <button class="btn btn-outline-primary transfer" data-id="${customer.id}"
+                                                                data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Transfer">
+                                                                <i class="fa fa-exchange-alt"></i>
+                                                            </button>
+                                                    </td>
+                                                    <td>   
+                                                            <button class="btn btn-outline-danger suspended" data-id="${customer.id}"
+                                                                data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Suspended">
+                                                                <i class="fa fa-trash-alt"></i>
+                                                            </button>
+                                                        </td>
+                                                    </tr>`;
+                                        let strRec =   `<tr id = "tr_${recipientChange.id}" data-id="${recipientChange.id}">
+                                                            <td>${recipientChange.id}</td>
+                                                            <td>${recipientChange.fullName}</td>
+                                                            <td>${recipientChange.email}</td>
+                                                            <td>${recipientChange.phone}</td>
+                                                            <td>${recipientChange.addeess}</td>
+                                                            <td>${recipientChange.balance}</td>
+                                                            <td>
+                                                                <button class="btn btn-outline-primary edit" data-id="${customer.id}"
+                                                                    data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Edit">
+                                                                    <i class="fa fa-edit"></i>
+                                                                </button>
+                                                            <td>  
+                                                                <button class="btn btn-outline-success deposit" data-id="${customer.id}"
+                                                                    data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Deposit">
+                                                                    <i class="fa fa-plus"></i>
+                                                                </button>
+                                                            </td>  
+
+                                                            <td>
+                                                                <button class="btn btn-outline-warning withdraw" data-id="${customer.id}"
+                                                                    data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Withdraw">
+                                                                    <i class="fa fa-minus"></i>
+                                                                </button>
+                                                            </td>   
+                                                            <td>
+                                                                <button class="btn btn-outline-primary transfer" data-id="${customer.id}"
+                                                                    data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Transfer">
+                                                                    <i class="fa fa-exchange-alt"></i>
+                                                                </button>
+                                                        </td>
+                                                        <td>   
+                                                                <button class="btn btn-outline-danger suspended" data-id="${customer.id}"
+                                                                    data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Suspended">
+                                                                    <i class="fa fa-trash-alt"></i>
+                                                                </button>
+                                                            </td>
+                                                        </tr>`;
+                                        let currentRowSen = $('#tr_' + sender.id);
+                                        let currentRowRec = $('#tr_' + recipient.id);
+                                        currentRowSen.replaceWith(strSen);
+                                        currentRowRec.replaceWith(strRec);
+                                        $('#mdTransfer').modal('hide');
+                                        $('#transferAmount').val("");
+                                        enableTootip();
+                                        removeHandleShowModal();
+                                        handleShowModal();
+                                    })
+                                    .fail((error) => {
+                                        alert("Chuyển Tiền Không Thành Công");   
+                                        recipient.balance = recipientBalance;
+                                        $.ajax({
+                                            "headers": {
+                                                "accepts": "application/json",
+                                                "content-type": "application/json"
+                                            },
+                                            "async":false,
+                                            "type": "PUT",
+                                            "url": "http://localhost:4100/customers/" + recipient.id,
+                                            "data": JSON.stringify(recipient)
+                                        })
+                                        .done((item) => {
+                                            sender.balance = senderBalance;
+                                            $.ajax({
+                                                "headers": {
+                                                    "accepts": "application/json",
+                                                    "content-type": "application/json"
+                                                },
+                                                "async":false,
+                                                "type": "PUT",
+                                                "url": "http://localhost:4100/customers/" + sender.id,
+                                                "data": JSON.stringify(sender)
+                                            })
+                                            .done((item2) => {
+                                                $('#mdTransfer').modal('hide');
+                                                $('#transferAmount').val("");
+                                            })
+                                        })
+                                    })
+                                })
+                                .fail((error) => {
+                                    alert('Cộng Tiền Không Thành Công');
+                                })
+                            })
+                            .fail((error) => {
+                                alert('Trừ Tiền Không Thành Công');
+                            })
+                        })
+                    }
+                }
+            })
+        }
+
+
+    function reduceBalace(customer) {
       return  $.ajax({
                 "headers": {
                     "accept": "application/json",
                     "content-type": "application/json"
                 },
                 "type": "PATCH",
-                "url": "http://localhost:5000/customers/" + customerId,
+                "url": "http://localhost:4100/customers/" + customer.id,
                 "data": JSON.stringify(customer)
             })
             .done((data) => {
@@ -604,7 +925,7 @@
                     "content-type": "application/json",
                 },
                 type: "POST",
-                url: "http://localhost:5000/withdraws",
+                url: "http://localhost:4100/withdraws/",
                 data: JSON.stringify(withdraw)
                 })
             .done(() => {
@@ -634,8 +955,8 @@
                     "accept": "application/json",
                     "content-type": "application/json"
                 },
-                "type": "PUT",
-                "url": "http://localhost:5000/customers/" + customer.id,
+                "type": "PATCH",
+                "url": "http://localhost:4100/customers/" + customer.id,
                 "data": JSON.stringify(customer)
 
             })
@@ -651,7 +972,7 @@
                 handleShowModal();
             })
             .fail((jqXHR) => {
-
+                console.log(jqXHR);
             })
     }
 
@@ -663,7 +984,7 @@
                 "content-type": "application/json",
             },
             type: "POST",
-            url: "http://localhost:5000/deposits",
+            url: "http://localhost:4100/deposits/",
             data: JSON.stringify(deposit)
         }).done((data)=>{
             
@@ -685,8 +1006,9 @@
 
 
                 customer.balance = newBanlace;
+                console.log(customerId);
 
-                addBalance(deposit).then(()=>{
+                addBalance(customer).then(()=>{
                     insDeposit();
                     })
                     .catch(()=>{
@@ -698,7 +1020,16 @@
             })   
 
     }
- 
+    
+    let btnTransfer = $("#btnTransfer");
+    $('#btnTransfer').on('click',function(){
+            $('#frmTransfer').submit();
+
+            $("#mdTransfer").on("hide.bs.modal", () => {
+            $("#mdTransfer .modal-alert-danger").removeClass("show").addClass("hide");
+            $("#frmDeposit").validate().resetForm();
+        })
+        })
 
     let btnDeposit = $("#btnDeposit");
     btnDeposit.on("click", () => {
@@ -709,6 +1040,7 @@
             $("#frmDeposit").validate().resetForm();
         })
     })
+   
 
 
     $("#frmDeposit").validate({
@@ -793,12 +1125,49 @@
         }
     })
 
+    $('#frmTransfer').validate({
+            rules: {
+                transferAmount: {
+                    required: true,
+                    number: true,
+                    min: 1000,
+                    max: 1000000000
+                }
+            },
+            messages: {
+                transferAmount: {
+                    required: "Vui lòng nhập tiền giao dịch",
+                    number: "Vui lòng chỉ nhập số",
+                    min: "Ít Nhất Bằng 1000",
+                    max: "Lớn nhất 1.000.000.000"
+                }
+            },
+            errorLabelContainer: "#mdTransfer .modal-alert-danger",
+            errorPlacement: function (error, element) {
+                error.appendTo("#mdTransfer .modal-alert-danger");
+            },
+            showErrors: function(errorMap, errorList) {
+                if (this.numberOfInvalids() > 0) {
+                    $("#mdTransfer .modal-alert-danger").removeClass("hide").addClass("show");
+                } else {
+                    $("#mdTransfer .modal-alert-danger").removeClass("show").addClass("hide").empty();
+                    $("#frmTransfer input.error").removeClass("error");
+                }
+                this.defaultShowErrors();
+            },
+            submitHandler: function () {
+                doTransfer();
+            }
+        })
+
     function handleShowModal() {
         handleShowUpdateCustomer();
 
         handelShowDepositModal();
 
         handleShowWithdrawModal();
+
+        hanleShowTransferModal();
 
         handleShowConfirmDelete();
     }
